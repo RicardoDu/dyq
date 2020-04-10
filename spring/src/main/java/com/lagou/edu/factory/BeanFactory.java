@@ -12,11 +12,10 @@ import org.dom4j.io.SAXReader;
 
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author 应癫
@@ -26,28 +25,23 @@ import java.util.Map;
 public class BeanFactory {
 
     /**
-     * 任务一：读取解析xml，通过反射技术实例化对象并且存储待用（map集合）
-     * 任务二：对外提供获取实例对象的接口（根据id获取）
+     *缓存集合
      */
-
     private static Map<String, Object> map = new HashMap<>();  // 存储对象  一级缓存
-
-        private static Map<String, Object> earlyMap = new HashMap<>();  // 存储对象  二级缓存
-
+    private static Map<String, Object> earlyMap = new HashMap<>();  // 存储对象  二级缓存
     private static Map<String, Object> basicMap = new HashMap<>();  // 存储对象  三级缓存
-
-    private static Map<String, Object> currentMap = new HashMap<>();  // 存储对象  当前正在生成的缓存
-
-
+    private static Set<String> currentBean = new HashSet<>();  //是否为当前正创建
+    private static Map<String,Set<String>> sonMap = new HashMap<>();  //autowired对应Bean
+    private static List<Map<String,Object>> toDealList = new ArrayList<>(); //要装配的bean集合
 
 
     static {
-        //initXML();
         try {
+            //将所有基础bean添加到三计缓存
             initAnnoElementType("com.lagou.edu.service.impl",Service.class);
             initAnnoElementType("com.lagou.edu.utils", Component.class);
             initAnnoElementType("com.lagou.edu.dao.impl", Repository.class);
-            //initAnnoElementFiled("com.lagou.edu", Autowired.class);
+            //
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (InstantiationException e) {
@@ -58,13 +52,6 @@ public class BeanFactory {
             e.printStackTrace();
         }
 
-    }
-
-    private static void initAnnoElementFiled(String packageName, Class<? extends Annotation> ano) {
-        List<Class<?>> classesAll = ClassUtil.getClasses(packageName);
-        for (Class<?> classInfo : classesAll) {
-            String className = ClassUtil.toLowerCaseFirstOne(classInfo.getName()); //将文件名转换
-        }
     }
 
     private static void initXML() {
@@ -87,7 +74,7 @@ public class BeanFactory {
                 Object o = aClass.newInstance();  // 实例化之后的对象
 
                 // 存储到map中待用
-                map.put(id, o);
+                basicMap.put(id, o);
 
             }
 
@@ -105,18 +92,18 @@ public class BeanFactory {
 
                 // 调用父元素对象的反射功能
                 String parentId = parent.attributeValue("id");
-                Object parentObject = map.get(parentId);
+                Object parentObject = basicMap.get(parentId);
                 // 遍历父对象中的所有方法，找到"set" + name
                 Method[] methods = parentObject.getClass().getMethods();
                 for (int j = 0; j < methods.length; j++) {
                     Method method = methods[j];
                     if (method.getName().equalsIgnoreCase("set" + name)) {  // 该方法就是 setAccountDao(AccountDao accountDao)
-                        method.invoke(parentObject, map.get(ref));
+                        method.invoke(parentObject, basicMap.get(ref));
                     }
                 }
 
                 // 把处理之后的parentObject重新放到map中
-                map.put(parentId, parentObject);
+                basicMap.put(parentId, parentObject);
 
             }
 
@@ -135,9 +122,9 @@ public class BeanFactory {
     }
 
     /**
-     * 扫描范围为ElementType.TYPE且带value属性注解
-     * @param packageName
-     * @param ano
+     * ElementType.TYPE类注解(包含value属性值) 扫描并添加到三级缓存
+     * @param packageName 路径
+     * @param ano 注解类
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws NoSuchMethodException
@@ -147,50 +134,69 @@ public class BeanFactory {
         // 任务一： 扫描service(Dao)Impl文件夹 找到所有的@service（map集合）
         List<Class<?>> classesAll = ClassUtil.getClasses(packageName);
         for (Class<?> classInfo : classesAll) {
-            String className = ClassUtil.toLowerCaseFirstOne(classInfo.getName()); //将文件名转换
             //2 判断类上面是否存在注入@service的注解 一个类最多存在一个@service注解
             Object serviceAnno = classInfo.getAnnotation(ano);
+            Object o = classInfo.getDeclaredConstructor().newInstance();// 实例化之后的对象
             if (serviceAnno != null) {
-                Method[] methods = ano.getMethods();
-                for (int j = 0; j < methods.length; j++) {
-                    Method method = methods[j];
-                    if (method.getName().equalsIgnoreCase("value")) {  // 该方法就是 setAccountDao(AccountDao accountDao)
-                        Object str = method.invoke(serviceAnno);
-                        if(map.get(str)==null){
-                            Object o = classInfo.getDeclaredConstructor().newInstance();// 实例化之后的对象
-                            try {
-                                map.put(str.toString(), o);
-                            }catch (NullPointerException e){
-                                System.out.println("注解调用错误"+ano.getName());
-                                throw e;
-                            }
-                        }
-                    }
+                String beanName = getBeanNameWithAnnoValue(ano, serviceAnno, classInfo);
+                basicMap.put(beanName, o);
+                //@Autowired注解 处理
+                Set<String> autoBean = collectAutoBean(classInfo);
+                if(autoBean.size()>0){
+                    sonMap.put(beanName,autoBean);
                 }
             }
         }
     }
 
-    ////@Autowired注解 处理 (service 内可能引入多个dao)
-    //                Field[] fields = classInfo.getDeclaredFields();
-    //                for (Field field : fields) {
-    //                    Annotation[] anns = field.getAnnotations();
-    //                    for (Annotation anno : anns) {
-    //                        if (anno instanceof Autowired) {
-    //                            System.out.println("6666");
-    //                            //转成Class
-    //                            Class autoClass= (Class) field.getGenericType();
-    //                            Field declaredField = classInfo.getDeclaredField(field.getName());
-    //                            declaredField.setAccessible(true);
-    //                            declaredField.set(map.get(par),map.get(ref));
-    //                        }
-    //                    }
-    //                }
+    /**
+     * 将autoBean集中到Set中
+     * @param classInfo
+     * @return
+     */
+    private static Set<String> collectAutoBean(Class<?> classInfo) {
+        Field[] fields = classInfo.getDeclaredFields();
+        Set<String> autoBean = new HashSet<>();
+        for (Field field : fields) {
+            Annotation[] anns = field.getAnnotations();
+            for (Annotation anno : anns) {
+                //发现AutowiredBean加入autoBean Set集合 最后存放到sonMap
+                if (anno instanceof Autowired) {
+                    Class autoClass= (Class) field.getGenericType();
+                    autoBean.add(autoClass.getName());
+                }
+            }
+        }
+        return autoBean;
+    }
+
+    /**
+     * 存到三级缓存
+     * @param ano
+     * @param serviceAnno
+     * @param classInfo
+     * @throws IllegalAccessException
+     * @throws InvocationTargetException
+     */
+    private static String getBeanNameWithAnnoValue(Class<? extends Annotation> ano, Object serviceAnno, Class<?> classInfo) throws IllegalAccessException, InvocationTargetException {
+        String className = ClassUtil.toLowerCaseFirstOne(classInfo.getName()); //将文件名转换
+        Method[] methods = ano.getMethods();
+        for (int j = 0; j < methods.length; j++) {
+            Method method = methods[j];
+            if (method.getName().equalsIgnoreCase("value")) {
+                Object str = method.invoke(serviceAnno);
+                return String.valueOf(str);
+            }
+        }
+        return className;
+    }
+
+
 
 
     // 任务二：对外提供获取实例对象的接口（根据id获取）
     public static Object getBean(String id) {
-        return map.get(id);
+        return basicMap.get(id);
     }
 
 }

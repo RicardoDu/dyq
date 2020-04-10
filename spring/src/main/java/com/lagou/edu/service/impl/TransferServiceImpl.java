@@ -12,10 +12,6 @@ import com.lagou.edu.service.TransferService;
 @Service(value="transferService")
 public class TransferServiceImpl implements TransferService {
 
-    //private AccountDao accountDao = new JdbcAccountDaoImpl();
-
-    // private AccountDao accountDao = (AccountDao) BeanFactory.getBean("accountDao");
-
     // 最佳状态
     @Autowired
     private AccountDao accountDao;

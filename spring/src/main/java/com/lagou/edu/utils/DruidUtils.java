@@ -14,11 +14,10 @@ public class DruidUtils {
 
 
     static {
-        druidDataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-        druidDataSource.setUrl("jdbc:mysql://mysql-aliyun.mysql.rds.aliyuncs.com:3306/mybatics?useUnicode=true&characterEncoding=utf-8&useSSL=false");
-        druidDataSource.setUsername("mysql_aliyun");
-        druidDataSource.setPassword("dyq528020501");
-
+        druidDataSource.setDriverClassName("com.mysql.jdbc.Driver");
+        druidDataSource.setUrl("jdbc:mysql://localhost:3306/bank");
+        druidDataSource.setUsername("root");
+        druidDataSource.setPassword("123456");
     }
 
     public static DruidDataSource getInstance() {
