@@ -2,7 +2,7 @@ package com.lagou.edu.servlet;
 
 import com.lagou.edu.factory.BeanFactory;
 import com.lagou.edu.factory.ProxyFactory;
-import com.lagou.edu.service.impl.TransferServiceImpl;
+import com.lagou.edu.utils.ClassUtil;
 import com.lagou.edu.utils.JsonUtils;
 import com.lagou.edu.pojo.Result;
 import com.lagou.edu.service.TransferService;
@@ -20,15 +20,7 @@ import java.io.IOException;
 @WebServlet(name="transferServlet",urlPatterns = "/transferServlet")
 public class TransferServlet extends HttpServlet {
 
-    // 1. 实例化service层对象
-    //private TransferService transferService = new TransferServiceImpl();
-    //private TransferService transferService = (TransferService) BeanFactory.getBean("transferService");
-
-    // 从工厂获取委托对象（委托对象是增强了事务控制的功能）
-
-    // 首先从BeanFactory获取到proxyFactory代理工厂的实例化对象
-    private ProxyFactory proxyFactory = (ProxyFactory) BeanFactory.getBean("proxyFactory");
-    private TransferService transferService = (TransferService) proxyFactory.getJdkProxy(BeanFactory.getBean("transferService")) ;
+    private TransferService transferService = (TransferService) BeanFactory.getBean("transferService");
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -38,6 +30,7 @@ public class TransferServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
+        ClassUtil c = new ClassUtil();
         // 设置请求体的字符编码
         req.setCharacterEncoding("UTF-8");
 

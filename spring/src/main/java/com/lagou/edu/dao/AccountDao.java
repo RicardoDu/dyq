@@ -1,5 +1,6 @@
 package com.lagou.edu.dao;
 
+import com.lagou.edu.anno.Repository;
 import com.lagou.edu.pojo.Account;
 
 /**

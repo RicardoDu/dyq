@@ -1,5 +1,7 @@
 package com.lagou.edu.dao.impl;
 
+import com.lagou.edu.anno.Autowired;
+import com.lagou.edu.anno.Repository;
 import com.lagou.edu.dao.AccountDao;
 import com.lagou.edu.pojo.Account;
 import com.lagou.edu.utils.ConnectionUtils;
@@ -11,22 +13,11 @@ import java.sql.ResultSet;
 /**
  * @author 应癫
  */
+@Repository(value = "accountDao")
 public class JdbcAccountDaoImpl implements AccountDao {
 
+    @Autowired
     private ConnectionUtils connectionUtils;
-
-    public void setConnectionUtils(ConnectionUtils connectionUtils) {
-        this.connectionUtils = connectionUtils;
-    }
-
-
-    public void init() {
-        System.out.println("初始化方法.....");
-    }
-
-    public void destory() {
-        System.out.println("销毁方法......");
-    }
 
     @Override
     public Account queryAccountByCardNo(String cardNo) throws Exception {
