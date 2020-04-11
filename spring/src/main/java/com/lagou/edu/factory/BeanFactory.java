@@ -37,6 +37,7 @@ public class BeanFactory {
      * basicMap 三级缓存
      * currentBean 当前正创建bean集合
      * sonMap beanName及其依赖beanName集合
+     * transferBean 事务bean
      */
     private static Map<String, Object> beanMap = new HashMap<>();
     private static Map<String, Object> earlyMap = new HashMap<>();
