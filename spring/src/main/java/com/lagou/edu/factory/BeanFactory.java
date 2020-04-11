@@ -1,16 +1,9 @@
 package com.lagou.edu.factory;
 
-import com.alibaba.druid.util.StringUtils;
 import com.lagou.edu.anno.Autowired;
-import com.lagou.edu.anno.Component;
 import com.lagou.edu.anno.Transactional;
 import com.lagou.edu.utils.ClassUtil;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.io.SAXReader;
 
-import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -66,14 +59,15 @@ public class BeanFactory {
 
     /**
      * 事务类工具初始化
+     *
      * @param name
      * @param value
      */
     private static void initAnnoElementTransfer(String name, Class<? extends Annotation> value) throws Exception {
         //事务类 处理
-        initAnnoElementService(name,value);
+        initAnnoElementService(name, value);
         //处理代理工厂
-        initBeanWithAutoWired(value,ProxyFactory.class);
+        initBeanWithAutoWired(value, ProxyFactory.class);
         beanAssemblyCycle(PROXY_FACTORY, sonMap.get(PROXY_FACTORY));
         //初始化代理工厂
         proxyFactory = (ProxyFactory) beanMap.get(PROXY_FACTORY);
@@ -83,13 +77,14 @@ public class BeanFactory {
 
     /**
      * 服务类bean处理
+     *
      * @param name
      * @param value
      * @throws Exception
      */
     private static void initAnnoElementService(String name, Class<? extends Annotation> value) throws Exception {
         //初始化Service层全部bean
-        initAnnoElementType(name,value);
+        initAnnoElementType(name, value);
         //处理其权限内的Autoired
         initAnnoElementFiled();
         //清空权限关系
@@ -104,36 +99,35 @@ public class BeanFactory {
             Object serviceAnno = classInfo.getAnnotation(ano);
             // 实例化之后的对象
             if (serviceAnno != null) {
-                putBeanToMap(classInfo, getBeanNameWithAnnoValue(serviceAnno, classInfo),beanMap);
+                putBeanToMap(classInfo, getBeanNameWithAnnoValue(serviceAnno, classInfo), beanMap);
             }
         }
     }
 
     /**
      * 根据classInfo 生成bean 放入到对应的map中
+     *
      * @param classInfo
      * @param beanName
      * @param setToMap
      * @return
      * @throws Exception
      */
-    private static Object putBeanToMap(Class<?> classInfo, String beanName,Map setToMap) throws Exception {
+    private static Object putBeanToMap(Class<?> classInfo, String beanName, Map setToMap) throws Exception {
         Object o;
-        try{
+        try {
             o = classInfo.getDeclaredConstructor().newInstance();
-            //默认value将文件名转换
-            //String beanName = ;
-            if(!typeBeanName.add(beanName)){
+            if (!typeBeanName.add(beanName)) {
                 //注解名重复
-                Object aClass = (beanMap.get(beanName)==null?(earlyMap.get(beanName)==null?basicMap.get(beanName):earlyMap.get(beanName)):beanMap.get(beanName));
-                System.out.println(classInfo.getName()+"注解名与"+aClass.getClass().getName()+"重复");
+                Object aClass = (beanMap.get(beanName) == null ? (earlyMap.get(beanName) == null ? basicMap.get(beanName) : earlyMap.get(beanName)) : beanMap.get(beanName));
+                System.out.println(classInfo.getName() + "注解名与" + aClass.getClass().getName() + "重复");
                 throw new Exception();
             }
-            if(setToMap!=null){
+            if (setToMap != null) {
                 setToMap.put(beanName, o);
             }
-        }catch (Exception e){
-            System.out.println(classInfo.getName()+"无需创建bean");
+        } catch (Exception e) {
+            System.out.println(classInfo.getName() + "无需创建bean");
             throw e;
         }
         return o;
@@ -177,14 +171,14 @@ public class BeanFactory {
                 //加入toDealList
                 toDealList.add(autoMap);
             }
-            if (earlyMap.get(k)!=null) {
+            if (earlyMap.get(k) != null) {
                 //earlyMap获取bean  通过toDealList装配 -> beanMap
                 keyBean = assemblyBean(earlyMap.get(k), toDealList);
-                putEarlyToBeanMap(k,keyBean);
+                putEarlyToBeanMap(k, keyBean);
             } else {
                 //basicMap获取bean  通过toDealList装配 -> beanMap(是否进一步操作？)
                 keyBean = assemblyBean(basicMap.get(k), toDealList);
-                putBasicToBeanMap(k,keyBean);
+                putBasicToBeanMap(k, keyBean);
             }
             currentBean.remove(k);
         } else {
@@ -195,13 +189,14 @@ public class BeanFactory {
 
     /**
      * 完整bean
+     *
      * @param fullName
      * @return
      * @throws Exception
      */
     private static Object doRealBean(String fullName) throws Exception {
         String[] fullNames = fullName.split("\\.");
-        String beanName = ClassUtil.toLowerCaseFirstOne(fullNames[fullNames.length-1]);
+        String beanName = ClassUtil.toLowerCaseFirstOne(fullNames[fullNames.length - 1]);
         Object autoBean = beanMap.get(beanName);//t为基础bean
         //判断map中是否存在该bean
         if (autoBean == null) {
@@ -211,11 +206,11 @@ public class BeanFactory {
                 autoBean = getCycleBean(beanName);
             } else {
                 autoBean = basicMap.get(beanName);
-                if(autoBean == null){
+                if (autoBean == null) {
                     //缓存中不存在此bean 根据全路径 实例化
-                    putBeanToMap(Class.forName(fullName),fullName,null);
-                    System.out.println(fullName+"实例化");
-                }else{
+                    putBeanToMap(Class.forName(fullName), fullName, null);
+                    System.out.println(fullName + "实例化");
+                } else {
                     //否 继续循环装配autoBean
                     autoBean = beanAssemblyCycle(beanName, sonMap.get(beanName));
                 }
@@ -226,6 +221,7 @@ public class BeanFactory {
 
     /**
      * 装配BEAN
+     *
      * @param keyBean
      * @param toDealList
      */
@@ -235,7 +231,7 @@ public class BeanFactory {
                 Object value = entry.getValue();
                 Field field = keyBean.getClass().getDeclaredField(entry.getKey());
                 field.setAccessible(true);
-                field.set(keyBean,value);
+                field.set(keyBean, value);
             }
         }
         return keyBean;
@@ -243,36 +239,39 @@ public class BeanFactory {
 
     /**
      * 出现循环依赖处理
+     *
      * @param k
      * @return
      */
     private static Object getCycleBean(String k) {
         //是:出现循环依赖
         Object autoBean = earlyMap.get(k);
-        if(autoBean == null){
-            autoBean =  putBasicToEarly(k,null);
+        if (autoBean == null) {
+            autoBean = putBasicToEarly(k, null);
         }
         return autoBean;
     }
 
     /**
      * 把bean从二级缓存取出并放到一级中
+     *
      * @param k beanName
      */
-    private static Object putEarlyToBeanMap(String k,Object bean) {
-        bean = bean==null?earlyMap.get(k):bean;
-        beanMap.put(k,bean);
+    private static Object putEarlyToBeanMap(String k, Object bean) {
+        bean = bean == null ? earlyMap.get(k) : bean;
+        beanMap.put(k, bean);
         earlyMap.remove(k);
         return bean;
     }
 
     /**
      * 将keyBean从三级缓存中升至二级缓存
+     *
      * @param k
      */
-    private static Object putBasicToEarly(String k,Object bean) {
-        bean = bean==null?basicMap.get(k):bean;
-        if(transferBean.contains(k)){
+    private static Object putBasicToEarly(String k, Object bean) {
+        bean = bean == null ? basicMap.get(k) : bean;
+        if (transferBean.contains(k)) {
             bean = proxyFactory.getJdkProxy(bean);
         }
         earlyMap.put(k, bean);
@@ -282,14 +281,15 @@ public class BeanFactory {
 
     /**
      * 把bean从三级缓存取出并放到一级中
+     *
      * @param k beanName
      */
-    private static Object putBasicToBeanMap(String k,Object bean) {
-        bean = bean==null?basicMap.get(k):bean;
-        if(transferBean.contains(k)){
+    private static Object putBasicToBeanMap(String k, Object bean) {
+        bean = bean == null ? basicMap.get(k) : bean;
+        if (transferBean.contains(k)) {
             bean = proxyFactory.getJdkProxy(bean);
         }
-        beanMap.put(k,bean);
+        beanMap.put(k, bean);
         basicMap.remove(k);
         return bean;
     }
@@ -314,8 +314,8 @@ public class BeanFactory {
         // 实例化之后的对象
         if (serviceAnno != null) {
             String beanName = getBeanNameWithAnnoValue(serviceAnno, classInfo);
-            putBeanToMap(classInfo,beanName,basicMap);
-            if(classInfo.getAnnotation(Transactional.class)!=null){
+            putBeanToMap(classInfo, beanName, basicMap);
+            if (classInfo.getAnnotation(Transactional.class) != null) {
                 transferBean.add(beanName);
             }
             //@Autowired注解 处理
@@ -324,7 +324,7 @@ public class BeanFactory {
                 sonMap.put(beanName, autoBean);
             } else {
                 //把bean从三级缓存取出并放到map中
-                putBasicToBeanMap(beanName,null);
+                putBasicToBeanMap(beanName, null);
             }
         }
     }
@@ -332,6 +332,7 @@ public class BeanFactory {
 
     /**
      * 将autoBean集中到Set中
+     *
      * @param classInfo 类文件
      */
     private static Set<String> collectAutoBean(Class<?> classInfo) throws InvocationTargetException, IllegalAccessException {
@@ -358,7 +359,7 @@ public class BeanFactory {
                             }
                         }
                     }
-                    autoBean.add(field.getName()+"#"+autoName);
+                    autoBean.add(field.getName() + "#" + autoName);
                     break;
                 }
             }
@@ -368,6 +369,7 @@ public class BeanFactory {
 
     /**
      * 获取注解value
+     *
      * @param serviceAnno
      */
     private static String getBeanNameWithAnnoValue(Object serviceAnno, Class<?> classInfo)
@@ -376,11 +378,11 @@ public class BeanFactory {
         for (Method method : methods) {
             if ("value".equalsIgnoreCase(method.getName())) {
                 Object str = method.invoke(serviceAnno);
-                if(str!=null&&!"".equals(str.toString())){
+                if (str != null && !"".equals(str.toString())) {
                     return str.toString();
-                }else{
+                } else {
                     //路径名-包名
-                    return ClassUtil.toLowerCaseFirstOne(classInfo.getName().replace(classInfo.getPackageName(),"").substring(1));
+                    return ClassUtil.toLowerCaseFirstOne(classInfo.getName().replace(classInfo.getPackageName(), "").substring(1));
                 }
             }
         }
