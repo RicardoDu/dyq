@@ -2,10 +2,10 @@
 
     <!--数据库配置信息-->
     <dataSource>
-        <property name="driverClass" value="com.mysql.jdbc.Driver"></property>
-        <property name="jdbcUrl" value="jdbc:mysql:///mybatics"></property>
-        <property name="username" value="root"></property>
-        <property name="password" value="root"></property>
+        <property name="driverClass" value="com.mysql.cj.jdbc.Driver"></property>
+        <property name="jdbcUrl" value="jdbc:mysql://mysql-aliyun.mysql.rds.aliyuncs.com:3306/mybatics?useUnicode=true&characterEncoding=utf-8&useSSL=false"></property>
+        <property name="username" value="mysql_aliyun"></property>
+        <property name="password" value="dyq528020501"></property>
     </dataSource>
 
     <!--存放mapper.xml的全路径-->
